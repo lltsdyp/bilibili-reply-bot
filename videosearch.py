@@ -32,7 +32,7 @@ def search_bilibili_videos(keyword, num,order='totalrank', duration=0,tids=0):
     # 设置请求参数
     params = {
         'search_type': 'video',
-        'keyword': urllib.parse.quote(keyword),
+        'keyword': keyword.replace(' ', '+'),
         'order': order,
         'duration': duration,
         'tids': tids,
