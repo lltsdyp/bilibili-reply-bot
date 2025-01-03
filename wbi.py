@@ -44,7 +44,7 @@ def getMixinKey(orig: str):
 def encWbi(params: dict, img_key: str, sub_key: str):
     '为请求参数进行 wbi 签名'
     mixin_key = getMixinKey(img_key + sub_key)
-    curr_time = round(time.time())
+    curr_time = int(time.time())
     params['wts'] = curr_time                                   # 添加 wts 字段
     params = dict(sorted(params.items()))                       # 按照 key 重排参数
     # 过滤 value 中的 "!'()*" 字符

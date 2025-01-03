@@ -20,7 +20,6 @@ import sys
 from typing import Optional
 
 from playwright.async_api import BrowserContext, Page
-
 from tenacity import (RetryError, retry, retry_if_result, stop_after_attempt,
                       wait_fixed)
 
@@ -37,7 +36,7 @@ class BilibiliLogin(AbstractLogin):
                  login_phone: Optional[str] = "",
                  cookie_str: str = ""
                  ):
-        config.LOGIN_TYPE = "qrcode"
+        config.LOGIN_TYPE = login_type
         self.browser_context = browser_context
         self.context_page = context_page
         self.login_phone = login_phone

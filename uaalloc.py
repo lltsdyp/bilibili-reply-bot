@@ -66,6 +66,5 @@ UA_list=[
 ]
 
 def ua_alloc():
-    idx=random.randint(0, len(UA_list))
-    return UA_list[idx]
+    return random.choice(UA_list)
 

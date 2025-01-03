@@ -1,5 +1,8 @@
+import json
+
 import requests
 import wbi
+from bilibili.field import CommentOrderType
 
 """
 获取指定oid对应的视频下的评论
@@ -9,7 +12,7 @@ mode为排序方式，默认为 3
 1：按热度+按时间
 2：仅按时间
 """
-def get_reply_by_oid(oid,num,type=1,mode=3):
+async def get_reply_by_oid(bili_client,oid,num,type=1,mode=3):
     # print(oid)
     url = "https://api.bilibili.com/x/v2/reply/wbi/main"
 
@@ -24,20 +27,17 @@ def get_reply_by_oid(oid,num,type=1,mode=3):
 
     count=0
 
-    params = {
-        'type': type,
-        'oid':oid,
-        'mode':mode
-    }
+    params = {'type': type, 'oid': oid, 'mode': mode, 'pagination_str': dict()}
 
-    for _ in range(num):
+    for i in range(num):
 
         # wbi签名
-        img_key,sub_key=wbi.getWbiKeys()
-        signed_params=wbi.encWbi(params,img_key,sub_key)
+        # img_key,sub_key=bili_client.get_wbi_keys()
+        # signed_params=wbi.encWbi(params,img_key,sub_key)
+        # signed_params= await bili_client.pre_request_data(params)
 
-        response=requests.get(url,headers=headers,params=signed_params)
-        response.raise_for_status()
+        response=await bili_client.get_video_comments(oid,order_mode=CommentOrderType.DEFAULT,next=i)
+        # response.raise_for_status()
         resp_json=response.json()
 
         # 可能是关闭了评论区
@@ -52,10 +52,29 @@ def get_reply_by_oid(oid,num,type=1,mode=3):
 
         for reply in replies:
             result.append(reply)
-        try:
-            params['pagination_reply']=resp_json['data']['cursor']['pagination_reply']['next_offset']
-        except KeyError:
-            break # 读取完成
+        # try:
+        #     next_str=resp_json['data']['cursor']['pagination_reply']
+        #     if len:
+        #         params['pagination_str']=''
+        #     else:
+        #         next_str=next_str['next_cursor']
+        #         next_json=json.loads(next_str)
+        #         next_json['pagination_reply']['data']['pn']+=1
+        #         params['pagination_reply']=json.dumps(next_json)
+        #         print(params['pagination_reply'])
+        #     if resp_json['data']['cursor']['is_end']:
+        #         print(f"Reach end, pages={i}")
+        #         break
+        # except KeyError:
+        #     break # 读取完成
+        pagination_reply=resp_json['data']['cursor']['pagination_reply']
+        if len(pagination_reply) == 0:
+            pass
+        else:
+            params['pagination_str']['offset']=pagination_reply['next_offset']
+            print(f'Not end nextoffset={pagination_reply["next_offset"]}')
+        if resp_json['data']['cursor']['is_end']:
+            break
         # break #测试
 
     return result

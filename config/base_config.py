@@ -10,26 +10,13 @@
 
 
 # 基础配置
-PLATFORM = "xhs"
-KEYWORDS = "编程副业,编程兼职"  # 关键词搜索配置，以英文逗号分隔
+PLATFORM = "bilibili"
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
 COOKIES = ""
-# 具体值参见media_platform.xxx.field下的枚举值，暂时只支持小红书
-SORT_TYPE = "popularity_descending"
-# 具体值参见media_platform.xxx.field下的枚举值，暂时只支持抖音
-PUBLISH_TIME_TYPE = 0
-CRAWLER_TYPE = (
-    "search"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)
-)
-# 自定义User Agent（暂时仅对XHS有效）
-
-# 是否开启 IP 代理
-ENABLE_IP_PROXY = False
 
 # 设置为True不会打开浏览器（无头浏览器）
 # 设置False会打开一个浏览器
-# 小红书如果一直扫码登录不通过，打开浏览器手动过一下滑动验证码
-# 抖音如果一直提示失败，打开浏览器看下是否扫码登录之后出现了手机号验证，如果出现了手动过一下再试。
+# 链接失败可设置为False进行检查
 HEADLESS = True
 
 # 是否保存登录状态
@@ -37,3 +24,16 @@ SAVE_LOGIN_STATE = True
 
 # 用户浏览器缓存的浏览器文件配置
 USER_DATA_DIR = "%s_user_data_dir"  # %s will be replaced by platform name
+
+
+# 爬取一级评论的数量控制(单视频/帖子)
+CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 200
+# 爬取搜索页的页数（一般来说页数*20=视频数）
+CRAWLER_MAX_SEARCH_PAGE_COUNT = 4
+# 处理每页搜索结果的线程数
+CONCURRENCY_THREADS_PER_PAGE = 4
+# 总的线程数（自动计算）
+MAX_CONCURRENCY_NUM = CONCURRENCY_THREADS_PER_PAGE*CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES
+
+# 限制搜索范围为最近多少天（为0不限制）
+DAY_BEFORE=0

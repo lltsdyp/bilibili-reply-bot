@@ -2,13 +2,14 @@ import asyncio
 import datetime
 import os
 from typing import Optional, Dict
-import queue
 
+from store import lite
 import videosearch
+from bilibili import BilibiliCrawler
 from reply import get_reply_by_oid
 import time
 import csv
-import concurrent.futures
+import config
 
 from playwright.async_api import (BrowserContext, BrowserType, Page,
                                   async_playwright)
@@ -19,7 +20,7 @@ import config
 from tools import utils
 
 # 每页的并发线程数
-EXECUTOR_PER_PAGE=4
+EXECUTOR_PER_PAGE=1
 
 async def launch_browser(
         chromium: BrowserType,
@@ -109,6 +110,7 @@ async def show_login_page():
             )
             await login_obj.begin()
             await bili_client.update_cookies(browser_context=browser_context)
+        return bili_client
 
 def save_comments_to_csv(comments, video_bvname):
     with open(f'{video_bvname}.csv', mode='w', encoding='utf-8-sig', newline='') as file:
@@ -120,49 +122,51 @@ def save_comments_to_csv(comments, video_bvname):
 """
 filter:指定筛选近多少天的评论，如：如果近一年则filter=365
 """
-def fetch_replies(keyword,page_count=2,reply_page_per_video=10,filter=None):
-    search_result=videosearch.search_bilibili_videos(keyword,page_count)
+async def fetch_replies(client, keyword, page_count=2, reply_page_per_video=10, filter=None):
+    search_result = videosearch.search_bilibili_videos(keyword, page_count)
 
-    result=[]
+    result = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=page_count*EXECUTOR_PER_PAGE) as executor:
-        future_to_video={executor.submit(get_reply_by_oid,i[1],reply_page_per_video,1,3) for i in search_result.items()}
-        for future in concurrent.futures.as_completed(future_to_video):
-            replies=queue.Queue()
-            try:
-                replies=future.result()
-            except Exception as e:
-                print("找不到更多的相关视频")
-                break
+    async def fetch_and_filter_replies(oid):
+        replies = await get_reply_by_oid(client, oid, reply_page_per_video, 1, 3)
+        if replies is not None:
+            for reply in replies:
+                reply_time = datetime.datetime.fromtimestamp(reply['ctime'])
+                current_time = datetime.datetime.now()
+                time_difference = current_time - reply_time
 
-            if replies is not None:
-                for reply in replies:
-                    reply_time=datetime.datetime.fromtimestamp(reply['ctime'])
-                    current_time=datetime.datetime.now()
-                    time_difference=current_time-reply_time
-                    
-                    if filter is None or time_difference < datetime.timedelta(days=filter):
-                        result.append({
-                            '评论内容': reply['content']['message'],
-                            '性别': reply['member']['sex'],
-                            '点赞数量': reply['like'],
-                            '回复时间': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(reply['ctime']))
-                        })
+                if filter is None or time_difference < datetime.timedelta(days=filter):
+                    result.append({
+                        '评论内容': reply['content']['message'],
+                        '性别': reply['member']['sex'],
+                        '点赞数量': reply['like'],
+                        '回复时间': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(reply['ctime']))
+                    })
+
+    tasks = [fetch_and_filter_replies(i[1]) for i in search_result.items()]
+    await asyncio.gather(*tasks)
     return result
 
 async def main():
 
-    # start_time=time.time() # 测试用
-    await show_login_page()
+    bili_crawler = BilibiliCrawler()
+    # 登录
+    await bili_crawler.start()
+
     keyword=input("请输入视频关键字：")
+    search_result = videosearch.search_bilibili_videos(keyword, config.CRAWLER_MAX_SEARCH_PAGE_COUNT)
 
-    result=fetch_replies(keyword,4,10,30)
 
-    save_comments_to_csv(result,keyword)
+    l=[i[1] for i in search_result.items()]
 
-    # end_time=time.time() # 测试用
+    start_time=time.time() # 测试用
+    await bili_crawler.batch_get_video_comments(l)
+    end_time=time.time() # 测试用
 
-    # print(f"总耗时：{end_time-start_time}s") # 测试用
+    print(f"总耗时：{end_time-start_time}s") # 测试用
+
+    save_comments_to_csv(lite.result,keyword)
+
 
     # print(f"检索了{count}个视频，抓取到{len(result)}条评论")
 
