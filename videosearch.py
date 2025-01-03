@@ -1,6 +1,7 @@
 import requests
 import wbi
 import urllib
+import uaalloc
 
 """
 工具函数
@@ -40,9 +41,10 @@ def search_bilibili_videos(keyword, num,order='totalrank', duration=0,tids=0):
     }
 
     # 设置请求头，包括Referer和User-Agent
+    ua=uaalloc.ua_alloc()
     headers = {
         'Referer': 'https://www.bilibili.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+        'User-Agent': ua,
         'Accept': '*/*',
         'Host': 'api.bilibili.com',
         'Connection': 'keep-alive',
@@ -55,7 +57,6 @@ def search_bilibili_videos(keyword, num,order='totalrank', duration=0,tids=0):
     for i in range(1,num+1):
         params['page'] = i
 
-
         # 发送GET请求
         # 发送前进行wbi签名
         img_key,sub_key=wbi.getWbiKeys()
@@ -63,6 +64,8 @@ def search_bilibili_videos(keyword, num,order='totalrank', duration=0,tids=0):
 
         # 发送签名后的请求
         response = requests.get(url, headers=headers, params=signed_params)
+
+        # print(response.json())
 
         # 检查响应状态码
         response.raise_for_status()

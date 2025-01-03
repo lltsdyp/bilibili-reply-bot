@@ -10,6 +10,7 @@ mode为排序方式，默认为 3
 2：仅按时间
 """
 def get_reply_by_oid(oid,num,type=1,mode=3):
+    # print(oid)
     url = "https://api.bilibili.com/x/v2/reply/wbi/main"
 
     headers = {

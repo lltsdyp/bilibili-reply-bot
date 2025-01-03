@@ -22,7 +22,6 @@ CRAWLER_TYPE = (
     "search"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)
 )
 # 自定义User Agent（暂时仅对XHS有效）
-UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0'
 
 # 是否开启 IP 代理
 ENABLE_IP_PROXY = False

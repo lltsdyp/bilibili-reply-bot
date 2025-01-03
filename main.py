@@ -1,6 +1,8 @@
 import asyncio
+import datetime
 import os
 from typing import Optional, Dict
+import queue
 
 import videosearch
 from reply import get_reply_by_oid
@@ -109,13 +111,16 @@ async def show_login_page():
             await bili_client.update_cookies(browser_context=browser_context)
 
 def save_comments_to_csv(comments, video_bvname):
-    with open(f'.\\{video_bvname}.csv', mode='w', encoding='utf-8-sig', newline='') as file:
+    with open(f'{video_bvname}.csv', mode='w', encoding='utf-8-sig', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['评论内容', '性别','点赞数量', '回复时间'])
         writer.writeheader()
         for comment in comments:
             writer.writerow(comment)
 
-def fetch_replies(keyword,page_count=2,reply_page_per_video=10):
+"""
+filter:指定筛选近多少天的评论，如：如果近一年则filter=365
+"""
+def fetch_replies(keyword,page_count=2,reply_page_per_video=10,filter=None):
     search_result=videosearch.search_bilibili_videos(keyword,page_count)
 
     result=[]
@@ -123,7 +128,7 @@ def fetch_replies(keyword,page_count=2,reply_page_per_video=10):
     with concurrent.futures.ThreadPoolExecutor(max_workers=page_count*EXECUTOR_PER_PAGE) as executor:
         future_to_video={executor.submit(get_reply_by_oid,i[1],reply_page_per_video,1,3) for i in search_result.items()}
         for future in concurrent.futures.as_completed(future_to_video):
-            replies=[]
+            replies=queue.Queue()
             try:
                 replies=future.result()
             except Exception as e:
@@ -132,12 +137,17 @@ def fetch_replies(keyword,page_count=2,reply_page_per_video=10):
 
             if replies is not None:
                 for reply in replies:
-                    result.append({
-                        '评论内容': reply['content']['message'],
-                        '性别': reply['member']['sex'],
-                        '点赞数量': reply['like'],
-                        '回复时间': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(reply['ctime']))
-                    })
+                    reply_time=datetime.datetime.fromtimestamp(reply['ctime'])
+                    current_time=datetime.datetime.now()
+                    time_difference=current_time-reply_time
+                    
+                    if filter is None or time_difference < datetime.timedelta(days=filter):
+                        result.append({
+                            '评论内容': reply['content']['message'],
+                            '性别': reply['member']['sex'],
+                            '点赞数量': reply['like'],
+                            '回复时间': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(reply['ctime']))
+                        })
     return result
 
 async def main():
@@ -146,7 +156,7 @@ async def main():
     await show_login_page()
     keyword=input("请输入视频关键字：")
 
-    result=fetch_replies(keyword,4,10)
+    result=fetch_replies(keyword,4,10,30)
 
     save_comments_to_csv(result,keyword)
 

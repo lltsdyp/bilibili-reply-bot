@@ -1,3 +1,4 @@
 *.csv
 __pycache__
 browser_data
+.venv
